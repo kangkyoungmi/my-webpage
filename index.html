@@ -1,139 +1,25 @@
 <!doctype html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>내 웹페이지</title>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>안좌면 토지조서 조회</title>
 <style>
-  :root{ --bg:#f6f7f9; --card:#fff; --ink:#1b2030; --muted:#5b6472; --line:#e6e8ee; --accent:#3f5bd9; }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);
-       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic",sans-serif;line-height:1.7}
-  .wrap{max-width:640px;margin:0 auto;padding:56px 20px 80px}
-  h1{font-size:34px;margin:0 0 8px}
-  .sub{color:var(--muted);margin:0 0 32px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin:0 0 20px}
-  h2{font-size:18px;margin:0 0 14px}
-  label{display:block;font-size:14px;color:var(--muted);margin:12px 0 6px}
-  input,textarea{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:9px;
-                 font:inherit;background:#fff;color:var(--ink)}
-  textarea{min-height:88px;resize:vertical}
-  button{margin-top:16px;width:100%;padding:12px;border:0;border-radius:9px;background:var(--accent);
-         color:#fff;font:inherit;font-weight:700;cursor:pointer}
-  button:disabled{opacity:.5;cursor:default}
-  .msg{margin-top:12px;font-size:14px;color:var(--muted);min-height:20px}
-  .entry{border-top:1px solid var(--line);padding:14px 0}
-  .entry:first-child{border-top:0}
-  .entry b{display:block}
-  .entry time{font-size:12.5px;color:var(--muted)}
-  .notice{background:#fef4ec;border:1px solid #e2a06a;border-radius:10px;padding:14px 16px;font-size:14.5px}
-</style>
-</head>
-<body>
-<div class="wrap">
-
-  <h1>안녕하세요, 강동민입니다</h1>
-  <p class="sub">이 페이지는 GitHub에 올려 Vercel로 배포했습니다.</p>
-
-  <section class="card">
-    <h2>방명록 남기기</h2>
-    <form id="guestbook-form">
-      <label for="name">이름</label>
-      <input id="name" maxlength="20" required placeholder="이름을 적어 주세요">
-      <label for="message">한마디</label>
-      <textarea id="message" maxlength="200" required placeholder="하고 싶은 말을 적어 주세요"></textarea>
-      <button type="submit" id="submit-btn">남기기</button>
-    </form>
-    <p class="msg" id="form-msg"></p>
-  </section>
-
-  <section class="card">
-    <h2>남겨진 글</h2>
-    <div id="entries"><p class="msg">불러오는 중...</p></div>
-  </section>
-
-</div>
-
-<!-- Supabase 라이브러리 -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-  // 여기 두 줄만 내 값으로 바꿉니다 (가이드 6단계)
-  const SUPABASE_URL = "https://qglazxkdwvanyhzeaixp.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_JwQIbDey_ZwZ8oCoJhM1xw_MdVL7rCg";
-
-  const entriesEl = document.getElementById("entries");
-  const formEl = document.getElementById("guestbook-form");
-  const msgEl = document.getElementById("form-msg");
-  const btnEl = document.getElementById("submit-btn");
-
-  const connected = SUPABASE_URL !== "" && SUPABASE_KEY !== "";
-  const db = connected ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
-
-  if (!connected) {
-    entriesEl.innerHTML =
-      '<div class="notice">아직 데이터베이스를 연결하지 않았습니다. ' +
-      "가이드의 데이터베이스 단계를 마치고 index.html 위쪽 두 줄을 채우면 " +
-      "여기에 방명록이 쌓입니다.</div>";
-    btnEl.disabled = true;
-  } else {
-    loadEntries();
-  }
-
-  async function loadEntries() {
-    const { data, error } = await db
-      .from("guestbook")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(50);
-
-    if (error) {
-      entriesEl.innerHTML = '<p class="msg">불러오지 못했습니다: ' + error.message + "</p>";
-      return;
-    }
-    if (!data.length) {
-      entriesEl.innerHTML = '<p class="msg">아직 남겨진 글이 없습니다.</p>';
-      return;
-    }
-    entriesEl.innerHTML = data
-      .map(function (row) {
-        return (
-          '<div class="entry"><b>' +
-          escapeHtml(row.name) +
-          "</b>" +
-          escapeHtml(row.message) +
-          "<time>" +
-          new Date(row.created_at).toLocaleString("ko-KR") +
-          "</time></div>"
-        );
-      })
-      .join("");
-  }
-
-  formEl.addEventListener("submit", async function (event) {
-    event.preventDefault();
-    btnEl.disabled = true;
-    msgEl.textContent = "저장하는 중...";
-
-    const { error } = await db.from("guestbook").insert({
-      name: document.getElementById("name").value.trim(),
-      message: document.getElementById("message").value.trim(),
-    });
-
-    if (error) {
-      msgEl.textContent = "저장하지 못했습니다: " + error.message;
-    } else {
-      msgEl.textContent = "남겼습니다.";
-      formEl.reset();
-      loadEntries();
-    }
-    btnEl.disabled = false;
-  });
-
-  function escapeHtml(text) {
-    return String(text).replace(/[&<>"']/g, function (ch) {
-      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
-    });
-  }
-</script>
-</body>
-</html>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#172033;--muted:#687386;--line:#dfe5ee;--accent:#2457d6;--soft:#eef3ff}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{max-width:1180px;margin:auto;padding:36px 18px 60px}.hero{background:linear-gradient(135deg,#183a8f,#3271e8);color:white;border-radius:22px;padding:30px;box-shadow:0 16px 40px #1d3f8f22}
+.hero h1{margin:0 0 8px;font-size:clamp(26px,4vw,40px)}.hero p{margin:0;opacity:.9}.privacy{margin-top:15px;font-size:13px;background:#ffffff18;border:1px solid #ffffff30;border-radius:10px;padding:10px 12px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}.stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}.stat b{display:block;font-size:26px}.stat span{color:var(--muted);font-size:13px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 8px 28px #1f29370d}.controls{display:grid;grid-template-columns:1.4fr .6fr .6fr;gap:10px;margin-bottom:14px}input,select{width:100%;padding:12px 13px;border:1px solid #ccd5e2;border-radius:11px;background:#fff;font-size:15px;outline:none}input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px #2457d618}
+.meta{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:8px 2px 12px;color:var(--muted);font-size:14px}.badge{background:var(--soft);color:var(--accent);padding:5px 9px;border-radius:999px;font-weight:700}
+.tablebox{overflow:auto;border:1px solid var(--line);border-radius:13px}table{border-collapse:collapse;width:100%;min-width:980px}th,td{padding:12px 11px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;font-size:14px}th{position:sticky;top:0;background:#f8faff;color:#465269;font-size:13px;z-index:1}tbody tr:hover{background:#f8fbff}.num{text-align:right;white-space:nowrap}.loc{white-space:nowrap}.multi{white-space:pre-line}.empty{text-align:center;padding:42px;color:var(--muted)}
+.foot{color:var(--muted);font-size:12px;margin-top:14px;line-height:1.6}@media(max-width:720px){.stats{grid-template-columns:1fr}.controls{grid-template-columns:1fr}.hero{padding:23px}.wrap{padding-top:18px}}
+</style></head><body><main class="wrap">
+<section class="hero"><h1>안좌면 토지조서 조회</h1><p>마명리 · 남강리 · 구대리 토지 정보를 빠르게 검색합니다.</p><div class="privacy">공개용 예시 페이지입니다. 소유자명, 주소, 주민등록번호(등록번호)는 개인정보 보호를 위해 표시하지 않습니다.</div></section>
+<section class="stats"><div class="stat"><b id="countAll">0</b><span>전체 필지</span></div><div class="stat"><b id="areaAll">0</b><span>전체 면적(㎡)</span></div><div class="stat"><b>3</b><span>대상 지역</span></div></section>
+<section class="panel"><div class="controls"><input id="q" placeholder="지번·지목·용도지역·규제 검색"><select id="village"><option value="">전체 지역</option><option>마명리</option><option>남강리</option><option>구대리</option></select><select id="land"><option value="">전체 지목</option></select></div>
+<div class="meta"><span id="resultText"></span><span class="badge">토지조서 1차 자료</span></div><div class="tablebox"><table><thead><tr><th>연번</th><th>위치</th><th>지번</th><th>지목</th><th class="num">면적(㎡)</th><th class="num">면적(평)</th><th>용도지역</th><th>기타규제</th><th class="num">공시지가(원/㎡)</th></tr></thead><tbody id="body"></tbody></table></div>
+<div class="foot">※ 원본 엑셀의 토지 관련 항목을 웹 조회용으로 구성한 실습 페이지입니다. 공시지가가 없는 항목은 ‘-’로 표시합니다.</div></section></main>
+<script>const source={"마명리": [{"연번": 1, "위치": "신안군 안좌면 마명리", "지번": "151", "지목": "전", "면적㎡": 1021, "면적평": 308.85249999999996, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 4470}, {"연번": 2, "위치": "신안군 안좌면 마명리", "지번": "152", "지목": "전", "면적㎡": 2013, "면적평": 608.9325, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 4470}, {"연번": 3, "위치": "신안군 안좌면 마명리", "지번": "153", "지목": "전", "면적㎡": 1898, "면적평": 574.145, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 4470}, {"연번": 4, "위치": "신안군 안좌면 마명리", "지번": "154", "지목": "전", "면적㎡": 972, "면적평": 294.03, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 4470}, {"연번": 5, "위치": "신안군 안좌면 마명리", "지번": "155", "지목": "임", "면적㎡": 982, "면적평": 297.055, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": null}, {"연번": 6, "위치": "신안군 안좌면 마명리", "지번": "156", "지목": "전", "면적㎡": 1289, "면적평": 389.9225, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 4470}, {"연번": 7, "위치": "신안군 안좌면 마명리", "지번": "157", "지목": "전", "면적㎡": 1207, "면적평": 365.1175, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 4470}, {"연번": 8, "위치": "신안군 안좌면 마명리", "지번": "산6", "지목": "임", "면적㎡": 12000, "면적평": 3630, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역\n준보전산지", "공시지가": 1170}, {"연번": 9, "위치": "신안군 안좌면 마명리", "지번": "12-1", "지목": "답", "면적㎡": 627, "면적평": 189.6675, "용도지역": "계획관리지역\n농림지역", "기타규제": "가축사육제한구역\n농업진흥구역", "공시지가": 6400}, {"연번": 10, "위치": "신안군 안좌면 마명리", "지번": "13-1", "지목": "답", "면적㎡": 895, "면적평": 270.7375, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역\n준보전산지", "공시지가": 7300}, {"연번": 11, "위치": "신안군 안좌면 마명리", "지번": "14-1", "지목": "전", "면적㎡": 1362, "면적평": 412.005, "용도지역": "계획관리지역\n농림지역", "기타규제": "가축사육제한구역", "공시지가": 6790}, {"연번": 12, "위치": "신안군 안좌면 마명리", "지번": "75", "지목": "전", "면적㎡": 1769, "면적평": 535.1225, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 4470}, {"연번": 13, "위치": "신안군 안좌면 소곡리", "지번": "1", "지목": "임", "면적㎡": 235, "면적평": 71.08749999999999, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역\n준보전산지", "공시지가": 1340}, {"연번": 14, "위치": "신안군 안좌면 소곡리", "지번": "2", "지목": "답", "면적㎡": 1277, "면적평": 386.29249999999996, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 7300}, {"연번": 15, "위치": "신안군 안좌면 소곡리", "지번": "3", "지목": "답", "면적㎡": 2191, "면적평": 662.7775, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 6950}, {"연번": 16, "위치": "신안군 안좌면 소곡리", "지번": "4", "지목": "답", "면적㎡": 1134, "면적평": 343.03499999999997, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 5910}, {"연번": 17, "위치": "신안군 안좌면 소곡리", "지번": "5", "지목": "답", "면적㎡": 201, "면적평": 60.802499999999995, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 6950}, {"연번": 18, "위치": "신안군 안좌면 소곡리", "지번": "37", "지목": "답", "면적㎡": 767, "면적평": 232.01749999999998, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 5630}, {"연번": 19, "위치": "신안군 안좌면 소곡리", "지번": "38", "지목": "답", "면적㎡": 595, "면적평": 179.98749999999998, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 5630}, {"연번": 20, "위치": "신안군 안좌면 소곡리", "지번": "39", "지목": "답", "면적㎡": 2195, "면적평": 663.9875, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 5630}, {"연번": 21, "위치": "신안군 안좌면 소곡리", "지번": "40", "지목": "답", "면적㎡": 2221, "면적평": 671.8525, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 5630}, {"연번": 22, "위치": "신안군 안좌면 소곡리", "지번": "41", "지목": "답", "면적㎡": 411, "면적평": 124.3275, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 5630}, {"연번": "합 계", "위치": "", "지번": "", "지목": "", "면적㎡": 37262, "면적평": 11271.754999999997, "용도지역": "", "기타규제": "", "공시지가": null}], "남강리": [{"연번": 1, "위치": "신안군 안좌면 남강리", "지번": "427", "지목": "전", "면적㎡": 2010, "면적평": 608.025, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 4300}, {"연번": 2, "위치": "신안군 안좌면 남강리", "지번": "428", "지목": "전", "면적㎡": 1488, "면적평": 450.12, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 5320}, {"연번": 3, "위치": "신안군 안좌면 남강리", "지번": "429", "지목": "전", "면적㎡": 1289, "면적평": 389.9225, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 5320}, {"연번": 4, "위치": "신안군 안좌면 남강리", "지번": "430", "지목": "전", "면적㎡": 790, "면적평": 238.975, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 4670}, {"연번": 5, "위치": "신안군 안좌면 남강리", "지번": "431", "지목": "답", "면적㎡": 397, "면적평": 120.0925, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 5870}, {"연번": 6, "위치": "신안군 안좌면 남강리", "지번": "433", "지목": "답", "면적㎡": 466, "면적평": 140.965, "용도지역": "생산관리지역", "기타규제": "가축사육제한구역", "공시지가": 4800}, {"연번": 7, "위치": "신안군 안좌면 남강리", "지번": "434", "지목": "답", "면적㎡": 780, "면적평": 235.95, "용도지역": "농림지역", "기타규제": "가축사육제한구역", "공시지가": 7190}, {"연번": 8, "위치": "신안군 안좌면 남강리", "지번": "435", "지목": "답", "면적㎡": 698, "면적평": 211.14499999999998, "용도지역": "농림지역", "기타규제": "가축사육제한구역", "공시지가": 7190}, {"연번": 9, "위치": "신안군 안좌면 남강리", "지번": "436", "지목": "전", "면적㎡": 261, "면적평": 78.9525, "용도지역": "생산관리지역", "기타규제": "가축사육제한구역", "공시지가": 3850}, {"연번": 10, "위치": "신안군 안좌면 남강리", "지번": "437", "지목": "전", "면적㎡": 1316, "면적평": 398.09, "용도지역": "생산관리지역", "기타규제": "가축사육제한구역", "공시지가": 3850}, {"연번": 11, "위치": "신안군 안좌면 남강리", "지번": "438", "지목": "전", "면적㎡": 717, "면적평": 216.89249999999998, "용도지역": "생산관리지역", "기타규제": "가축사육제한구역", "공시지가": 4150}, {"연번": 12, "위치": "신안군 안좌면 남강리", "지번": "439", "지목": "전", "면적㎡": 1554, "면적평": 470.085, "용도지역": "생산관리지역", "기타규제": "가축사육제한구역", "공시지가": 4150}, {"연번": 13, "위치": "신안군 안좌면 남강리", "지번": "441", "지목": "전", "면적㎡": 1511, "면적평": 457.0775, "용도지역": "생산관리지역", "기타규제": "가축사육제한구역", "공시지가": 3850}, {"연번": 14, "위치": "신안군 안좌면 남강리", "지번": "442", "지목": "답", "면적㎡": 1193, "면적평": 360.8825, "용도지역": "생산관리지역", "기타규제": "가축사육제한구역", "공시지가": 4480}, {"연번": 15, "위치": "신안군 안좌면 남강리", "지번": "444", "지목": "답", "면적㎡": 2598, "면적평": 785.895, "용도지역": "농림지역", "기타규제": "가축사육제한구역", "공시지가": 6830}, {"연번": 16, "위치": "신안군 안좌면 남강리", "지번": "445", "지목": "답", "면적㎡": 1712, "면적평": 517.88, "용도지역": "농림지역", "기타규제": "가축사육제한구역", "공시지가": 6830}, {"연번": 17, "위치": "신안군 안좌면 남강리", "지번": "446-1", "지목": "답", "면적㎡": 1200, "면적평": 363, "용도지역": "농림지역", "기타규제": "가축사육제한구역", "공시지가": 7030}, {"연번": 18, "위치": "신안군 안좌면 남강리", "지번": "447-1", "지목": "답", "면적㎡": 1957, "면적평": 591.9925, "용도지역": "농림지역", "기타규제": "가축사육제한구역", "공시지가": 7030}, {"연번": 19, "위치": "신안군 안좌면 남강리", "지번": "산7-1", "지목": "임야", "면적㎡": 893, "면적평": 270.1325, "용도지역": "생산관리지역", "기타규제": "가축사육제한구역", "공시지가": 1060}, {"연번": 20, "위치": "신안군 안좌면 남강리", "지번": "432", "지목": "답", "면적㎡": 261, "면적평": 78.9525, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 5870}, {"연번": 21, "위치": "신안군 안좌면 남강리", "지번": "443", "지목": "전", "면적㎡": 1792, "면적평": 542.0799999999999, "용도지역": "생산관리지역", "기타규제": "가축사육제한구역", "공시지가": 3850}, {"연번": 22, "위치": "신안군 안좌면 남강리", "지번": "462", "지목": "전", "면적㎡": 605, "면적평": 183.0125, "용도지역": "농림지역", "기타규제": "가축사육제한구역", "공시지가": 5390}, {"연번": 23, "위치": "신안군 안좌면 남강리", "지번": "463", "지목": "답", "면적㎡": 1418, "면적평": 428.945, "용도지역": "농림지역", "기타규제": "가축사육제한구역", "공시지가": 6830}, {"연번": 24, "위치": "신안군 안좌면 남강리", "지번": "464", "지목": "답", "면적㎡": 1950, "면적평": 589.875, "용도지역": "농림지역", "기타규제": "가축사육제한구역", "공시지가": 6830}, {"연번": 25, "위치": "신안군 안좌면 남강리", "지번": "465-1", "지목": "답", "면적㎡": 3755, "면적평": 1135.8875, "용도지역": "농림지역", "기타규제": "가축사육제한구역", "공시지가": 7030}, {"연번": 26, "위치": "신안군 안좌면 남강리", "지번": "466", "지목": "전", "면적㎡": 714, "면적평": 215.98499999999999, "용도지역": "생산관리지역", "기타규제": "가축사육제한구역", "공시지가": 4150}, {"연번": 27, "위치": "신안군 안좌면 남강리", "지번": "467", "지목": "답", "면적㎡": 2780, "면적평": 840.9499999999999, "용도지역": "농림지역", "기타규제": "가축사육제한구역", "공시지가": 6830}, {"연번": 28, "위치": "신안군 안좌면 남강리", "지번": "468", "지목": "답", "면적㎡": 704, "면적평": 212.95999999999998, "용도지역": "농림지역", "기타규제": "가축사육제한구역", "공시지가": 6830}, {"연번": 29, "위치": "신안군 안좌면 남강리", "지번": "476", "지목": "전", "면적㎡": 922, "면적평": 278.905, "용도지역": "생산관리지역", "기타규제": "가축사육제한구역", "공시지가": 3850}, {"연번": 30, "위치": "신안군 안좌면 남강리", "지번": "477", "지목": "답", "면적㎡": 1289, "면적평": 389.9225, "용도지역": "생산관리지역", "기타규제": "가축사육제한구역", "공시지가": 4480}, {"연번": 31, "위치": "신안군 안좌면 남강리", "지번": "산1", "지목": "임야", "면적㎡": 12298, "면적평": 3720.145, "용도지역": "-", "기타규제": "-", "공시지가": 1120}, {"연번": "합 계", "위치": "", "지번": "", "지목": "", "면적㎡": 51318, "면적평": 15523.695000000002, "용도지역": "", "기타규제": "", "공시지가": null}], "구대리": [{"연번": 1, "위치": "신안군 안좌면 구대리", "지번": "505", "지목": "대", "면적㎡": 125, "면적평": 37.8125, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 8000}, {"연번": 2, "위치": "신안군 안좌면 구대리", "지번": "506", "지목": "대", "면적㎡": 206, "면적평": 62.315, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 8000}, {"연번": 3, "위치": "신안군 안좌면 구대리", "지번": "509", "지목": "답", "면적㎡": 1309, "면적평": 395.97249999999997, "용도지역": "생산관리지역", "기타규제": "가축사육제한구역", "공시지가": 4460}, {"연번": 4, "위치": "신안군 안좌면 구대리", "지번": "523", "지목": "답", "면적㎡": 1008, "면적평": 304.92, "용도지역": "생산관리지역", "기타규제": "가축사육제한구역", "공시지가": 4720}, {"연번": 5, "위치": "신안군 안좌면 구대리", "지번": "524", "지목": "답", "면적㎡": 998, "면적평": 301.895, "용도지역": "생산관리지역", "기타규제": "가축사육제한구역", "공시지가": 4720}, {"연번": 6, "위치": "신안군 안좌면 구대리", "지번": "538", "지목": "전", "면적㎡": 1343, "면적평": 406.2575, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 4740}, {"연번": 7, "위치": "신안군 안좌면 구대리", "지번": "539", "지목": "답", "면적㎡": 582, "면적평": 176.055, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 5880}, {"연번": 8, "위치": "신안군 안좌면 구대리", "지번": "540", "지목": "전", "면적㎡": 750, "면적평": 226.875, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 4740}, {"연번": 9, "위치": "신안군 안좌면 구대리", "지번": "541", "지목": "전", "면적㎡": 2423, "면적평": 732.9575, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 4740}, {"연번": 10, "위치": "신안군 안좌면 구대리", "지번": "508", "지목": "전", "면적㎡": 3197, "면적평": 967.0925, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 4520}, {"연번": 11, "위치": "신안군 안좌면 구대리", "지번": "525-1", "지목": "전", "면적㎡": 1189, "면적평": 359.6725, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 4740}, {"연번": 12, "위치": "신안군 안좌면 구대리", "지번": "526", "지목": "전", "면적㎡": 1220, "면적평": 369.05, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 4740}, {"연번": 13, "위치": "신안군 안좌면 구대리", "지번": "527", "지목": "전", "면적㎡": 2453, "면적평": 742.0325, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 4740}, {"연번": 14, "위치": "신안군 안좌면 구대리", "지번": "528", "지목": "전", "면적㎡": 2387, "면적평": 722.0675, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 4740}, {"연번": 15, "위치": "신안군 안좌면 구대리", "지번": "530", "지목": "전", "면적㎡": 4737, "면적평": 1432.9424999999999, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 5160}, {"연번": 16, "위치": "신안군 안좌면 구대리", "지번": "538-1", "지목": "전", "면적㎡": 1751, "면적평": 529.6775, "용도지역": "계획관리지역", "기타규제": "가축사육제한구역", "공시지가": 4740}, {"연번": "합 계", "위치": "", "지번": "", "지목": "", "면적㎡": 25678, "면적평": 7767.595, "용도지역": "", "기타규제": "", "공시지가": null}]};const rows=Object.entries(source).flatMap(([v,rs])=>rs.map(r=>({...r,마을:v})));const fmt=n=>n==null?'—':Number(n).toLocaleString('ko-KR');const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const q=document.querySelector('#q'), village=document.querySelector('#village'), land=document.querySelector('#land'), body=document.querySelector('#body');
+[...new Set(rows.map(r=>r['지목']))].sort().forEach(x=>land.insertAdjacentHTML('beforeend',`<option>${esc(x)}</option>`));
+document.querySelector('#countAll').textContent=fmt(rows.length);document.querySelector('#areaAll').textContent=fmt(rows.reduce((a,r)=>a+(r['면적㎡']||0),0));
+function render(){const term=q.value.trim().toLowerCase();const out=rows.filter(r=>(!village.value||r.마을===village.value)&&(!land.value||r['지목']===land.value)&&(!term||[r['위치'],r['지번'],r['지목'],r['용도지역'],r['기타규제']].join(' ').toLowerCase().includes(term)));document.querySelector('#resultText').textContent=`${out.length}개 필지 표시 중`;
+body.innerHTML=out.length?out.map(r=>`<tr><td>${esc(r['연번'])}</td><td class="loc">${esc(r['위치'])}</td><td><b>${esc(r['지번'])}</b></td><td>${esc(r['지목'])}</td><td class="num">${fmt(r['면적㎡'])}</td><td class="num">${r['면적평']==null?'—':Number(r['면적평']).toLocaleString('ko-KR',{maximumFractionDigits:2})}</td><td class="multi">${esc(r['용도지역'])}</td><td class="multi">${esc(r['기타규제'])}</td><td class="num">${fmt(r['공시지가'])}</td></tr>`).join(''):`<tr><td colspan="9" class="empty">검색 결과가 없습니다.</td></tr>`}q.addEventListener('input',render);village.addEventListener('change',render);land.addEventListener('change',render);render();</script></body></html>
