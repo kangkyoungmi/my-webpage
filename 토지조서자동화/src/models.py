@@ -33,6 +33,11 @@ class ParcelRecord:
     소재지: str
     지번: str
     pnu: str | None = None
+    # 브이월드 PNU 조회(search_pnu)가 함께 돌려주는 좌표(x=경도, y=위도, EPSG:4326).
+    # 클라우드 적재(Supabase parcels.geom) 시에만 쓰이지만, 여기서 안 받아두면
+    # 조서 자체는 정상 완성돼도 그 필지가 지도/판정 화면에 영원히 안 나타난다.
+    경도: float | None = None
+    위도: float | None = None
     지목: str | None = None
     면적_m2: float | None = None
     면적_평: float | None = None

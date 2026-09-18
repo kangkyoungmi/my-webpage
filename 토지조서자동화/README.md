@@ -20,6 +20,9 @@ python src/main.py --input data/sample_manyparcel.xlsx --output data/result.xlsx
 
 # 브이월드 운영키 미승인 상태에서 면적을 채우고 싶으면 등기부등본 CSV(지번,면적_m2)를 함께 지정
 python src/main.py --input data/sample_manyparcel.xlsx --output data/result.xlsx --registry-csv data/registry_마명리.csv
+
+# 사업부지_통합에이전트(KCH_9Team)의 Supabase 적재 스크립트에 바로 넘길 JSON도 함께 출력
+python src/main.py --input data/sample_manyparcel.xlsx --output data/result.xlsx --json-output data/result.json
 ```
 
 입력 엑셀은 `소재지`, `지번` 헤더 컬럼이 필수다 (`data/sample_*.xlsx` 참고).
@@ -31,6 +34,7 @@ python src/main.py --input data/sample_manyparcel.xlsx --output data/result.xlsx
 - ✅ FR-3-Fallback ②(등기부등본 CSV): 검증 완료 — 실제 신안군 마명리 12필지로 100% 일치 확인
 - ⏳ FR-3-Fallback ③(연속지적도 shp): `fallback_cadastral.py`에 인터페이스만 구현, fiona/shapely 미설치 상태(선택 설치 필요)
 - ⏳ FR-4 규제사항 AI 정리, FR-6 이상 Phase 2/3 항목: 착수 전
+- ✅ (2026.09.18 추가) PNU 조회 응답의 좌표(경도/위도)를 `ParcelRecord`에 붙이고, `--json-output`으로 사업부지_통합에이전트(KCH_9Team)의 `scripts/load_parcels_to_supabase.py`가 바로 읽을 수 있는 JSON을 출력한다. 좌표가 없으면 그 필지는 클라우드 화면(필지 탭)에 영원히 안 나타나던 문제(PR #1 최종 리뷰에서 발견)의 근본 해결
 
 ## 브이월드 운영키 승인되면
 

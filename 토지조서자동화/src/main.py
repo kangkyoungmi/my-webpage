@@ -12,6 +12,7 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
+from export_json import export_records_json
 from fallback_registry_pdf import load_registry_areas, normalize_jibun
 from ledger_builder import build_ledger
 from models import FailureCode, ParcelRecord, QueryStatus
@@ -80,6 +81,22 @@ def read_input_parcels(input_path: Path) -> list[tuple[str, str]]:
     return parcels
 
 
+def _parse_coordinates(pnu_result: dict) -> tuple[float | None, float | None]:
+    """PNU 조회 응답의 좌표(x=경도, y=위도, EPSG:4326)를 파싱한다.
+
+    좌표가 없거나 형식이 이상해도 지목·면적 등 조서의 나머지 값은 여전히
+    유효한 산출물이므로, 예외를 던져 전체 조회를 막지 않고 좌표만 비워둔다
+    - 값을 추측하지 않고 모르면 비워둔다는 이 프로젝트의 원칙과 같다.
+    """
+    x, y = pnu_result.get("x"), pnu_result.get("y")
+    try:
+        lon = float(x) if x is not None else None
+        lat = float(y) if y is not None else None
+    except (TypeError, ValueError):
+        return None, None
+    return lon, lat
+
+
 def process_parcel(
     client: VWorldClient,
     address: str,
@@ -94,6 +111,7 @@ def process_parcel(
         record.mark_failure(FailureCode.PNU_NOT_FOUND)
     else:
         record.pnu = pnu_result["pnu"]
+        record.경도, record.위도 = _parse_coordinates(pnu_result)
 
     # FR-3: 지목/면적 (1차: VWorld ned API)
     if record.pnu:
@@ -208,6 +226,12 @@ def main() -> None:
         help="등기부등본에서 미리 추출한 지번,면적_m2 CSV/TSV (FR-3-Fallback ②)",
     )
     parser.add_argument("--no-cache", action="store_true", help="API 응답 캐시 사용 안 함")
+    parser.add_argument(
+        "--json-output",
+        default=None,
+        help="사업부지_통합에이전트(KCH_9Team)의 scripts/load_parcels_to_supabase.py에 "
+        "그대로 넘길 수 있는 JSON도 함께 출력 (좌표 포함, PNU 없는 레코드는 제외)",
+    )
     args = parser.parse_args()
 
     api_key = get_vworld_key()
@@ -239,6 +263,10 @@ def main() -> None:
     partial = sum(1 for r in records if r.조회상태 == QueryStatus.PARTIAL)
     failed = sum(1 for r in records if r.조회상태 == QueryStatus.FAILED)
     logger.info("완료: 성공 %d / 부분성공 %d / 실패 %d -> %s", success, partial, failed, out_path)
+
+    if args.json_output:
+        json_path = export_records_json(records, args.json_output)
+        logger.info("클라우드 적재용 JSON 출력: %s", json_path)
 
 
 if __name__ == "__main__":
